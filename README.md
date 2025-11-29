@@ -21,13 +21,13 @@
 Clone the repo and link the script to your `PATH`:
 
 ```bash
-git clone https://github.com/wakabaloola/cs.git
+git clone git@github.com:dskliros/visualise-code-structure.git
 cd cs
 chmod +x cs.py
 ln -s "$(pwd)/cs.py" /usr/local/bin/cs
 ````
 
-> 🔧 You may also rename `cs.py` to `cs` for a cleaner command name.
+> You may also rename `cs.py` to `cs` for a cleaner command name.
 
 Ensure Python 3.6+ is installed and accessible as `python3`.
 

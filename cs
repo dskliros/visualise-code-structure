@@ -355,6 +355,70 @@ def get_verbosity_level(args):
     return 0     # Basic mode
 
 
+def print_single_file(file_path: str, verbosity: int = 0, show_docstrings=False):
+    """
+    Print the code structure for a single file.
+
+    Args:
+        file_path: Path to the Python file
+        verbosity: Detail level (0-3)
+        show_docstrings: If True, prints docstrings for classes/functions.
+    """
+    global error_messages
+    error_messages = []
+
+    if not os.path.exists(file_path):
+        print(f"Error: File '{file_path}' not found.", file=sys.stderr)
+        return
+
+    filename = os.path.basename(file_path)
+    print(f"\n\033[1m{filename}\033[0m")  # Bold filename
+    print("=" * len(filename))
+    print()
+
+    structure = get_code_structure(file_path, verbosity, show_docstrings)
+
+    if 'functions' in structure and structure['functions']:
+        print("\033[93mFunctions:\033[0m")  # Yellow heading
+        print("-" * 10)
+        for func in sorted(structure['functions'], key=lambda x: x['signature']):
+            print(f"└── {func['signature']}")
+            if show_docstrings and func['docstring']:
+                doc_lines = func['docstring'].splitlines()
+                for line in doc_lines:
+                    print(f"     \033[90m{line}\033[0m")
+        print()
+
+    classes = [k for k in structure.keys() if k != 'functions']
+    if classes:
+        print("\033[93mClasses:\033[0m")
+        print("-" * 8)
+        for class_name in sorted(classes):
+            class_info = structure[class_name]
+            print(f"└── {class_name}")
+
+            if show_docstrings and class_info['docstring']:
+                doc_lines = class_info['docstring'].splitlines()
+                for line in doc_lines:
+                    print(f"     \033[90m{line}\033[0m")
+
+            if 'methods' in class_info:
+                for method in sorted(class_info['methods'], key=lambda x: x['signature']):
+                    print(f"    └── {method['signature']}")
+                    if show_docstrings and method['docstring']:
+                        doc_lines = method['docstring'].splitlines()
+                        for line in doc_lines:
+                            print(f"         \033[90m{line}\033[0m")
+        print()
+
+    if error_messages:
+        print("\n\033[91mErrors encountered:\033[0m")
+        print("-" * 20)
+        for error in error_messages:
+            print(f"\033[90m{error}\033[0m")
+        print()
+
+
 def main():
     bold = "\033[1m"
     reset = "\033[0m"
@@ -368,16 +432,16 @@ def main():
        cs - Code structure analyzer for Python files
 
 {bold}SYNOPSIS{reset}
-       cs [-a] [-t] [-d] [--ignore PATTERNS...] [DIRECTORY]
+       cs [-a] [-t] [-d] [--ignore PATTERNS...] [FILE|DIRECTORY]
 
 {bold}DESCRIPTION{reset}
-       Analyzes Python files in the specified directory (and its subdirectories) to display
-       the structure of classes, methods, and functions. Can show argument names and type
-       information with different combinations of flags.
+       Analyses a Python file or all Python files in a directory (and its subdirectories)
+       to display the structure of classes, methods, and functions. Can show argument names
+       and type information with different combinations of flags.
 
 {bold}OPTIONS{reset}
-        DIRECTORY
-            Directory to analyze. If not specified, uses the current directory.
+        FILE|DIRECTORY
+            Python file or directory to analyse. If not specified, uses the current directory.
 
         -a, --arguments
             Show argument names in function signatures
@@ -402,8 +466,11 @@ def main():
        {bold}cs -t /path/to/project{reset}
               Show class/method/function names, including argument and return 'types' (not including argument names). The search happens recursively through all (.py) files and subdirectories, starting at '/path/to/project'.
 
-       {bold}cs -t -a /path/to/project{reset}
+       {bold}cs -ta /path/to/project{reset}
               Show class/method/function names, including argument types, return types, and argument names. The search happens recursively through all (.py) files and subdirectories, starting at '/path/to/project'. The format {bold}cs -ta /path/to/project{reset} is also acceptable.
+
+       {bold}cs -ta my_script.py{reset}
+              Analyse a single Python file showing full signatures with argument names and types.
 
        {bold}cs -d .{reset}
               Show class/method/function names, but in this case include any 'docstrings' that might be present. The search happens recursively through all (.py) files and subdirectories starting from the current directory, '.'.
@@ -437,10 +504,10 @@ def main():
     )
 
     parser.add_argument(
-        'directory', 
-        nargs='?', 
+        'path',
+        nargs='?',
         default='.',
-        help=f"{bold}Directory to analyze{reset} (default: current directory)"
+        help=f"{bold}File or directory to analyse{reset} (default: current directory)"
     )
 
     parser.add_argument(
@@ -473,18 +540,31 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.isdir(args.directory):
-        print(f"Error: '{args.directory}' is not a valid directory.", file=sys.stderr)
+    if not os.path.exists(args.path):
+        print(f"Error: '{args.path}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    if os.path.isfile(args.path) and not args.path.endswith('.py'):
+        print(f"Error: '{args.path}' is not a Python file.", file=sys.stderr)
         sys.exit(1)
 
     # Use the pager context manager to enable scrollable output
     with less_pager():
-        print_structure(
-            root_dir=args.directory, 
-            verbosity=get_verbosity_level(args), 
-            ignore_patterns=args.ignore,
-            show_docstrings=args.docstrings
-        )
+        if os.path.isfile(args.path):
+            # Handle single file
+            print_single_file(
+                file_path=args.path,
+                verbosity=get_verbosity_level(args),
+                show_docstrings=args.docstrings
+            )
+        else:
+            # Handle directory
+            print_structure(
+                root_dir=args.path,
+                verbosity=get_verbosity_level(args),
+                ignore_patterns=args.ignore,
+                show_docstrings=args.docstrings
+            )
 
 
 if __name__ == "__main__":
