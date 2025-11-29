@@ -1,6 +1,6 @@
 # cs — Code Structure Analyzer for Python
 
-`cs` is a command-line tool that recursively scans a directory of Python files and summarizes the structure of your codebase — showing **functions**, **classes**, **methods**, their **arguments**, **types**, and optionally **docstrings**. It's perfect for quickly understanding large or unfamiliar projects, generating documentation, or exploring legacy code.
+`cs` is a command-line tool that recursively scans a directory of Python files and summarizes the structure of your codebase — showing **functions**, **classes**, **methods**, and optionally their **arguments**, **types**, and **docstrings**. I use it to get a quick overview of large or unfamiliar projects, generating documentation, or exploring legacy code. It is especially useful for Python developers that primarily work from the command line, VIM users, etc.
 
 ---
 
